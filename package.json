@@ -1,0 +1,36 @@
+{
+  "name": "ticket-booking-system",
+  "version": "1.0.0",
+  "description": "Event ticket booking API in Node.js, built to demonstrate CI/CD, security and scalability practices",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/server.js",
+    "start:cluster": "node --env-file-if-exists=.env src/cluster.js",
+    "dev": "node --watch --env-file-if-exists=.env src/server.js",
+    "seed": "node --env-file-if-exists=.env scripts/seed.js",
+    "demo": "node --env-file-if-exists=.env scripts/demo.js",
+    "race": "node --env-file-if-exists=.env scripts/race-test.js",
+    "users": "node --env-file-if-exists=.env scripts/show-users.js",
+    "lint": "eslint .",
+    "test": "node --test \"tests/**/*.test.js\"",
+    "audit:prod": "npm audit --omit=dev --audit-level=high"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "redis": "^4.7.0",
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "eslint": "^9.17.0",
+    "globals": "^15.14.0"
+  }
+}

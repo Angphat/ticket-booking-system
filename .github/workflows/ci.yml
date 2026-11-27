@@ -1,0 +1,105 @@
+# [CI/CD] Based on the "Advanced CI/CD Pipeline" in the W3Schools Node.js CI/CD article:
+#   checkout -> install with cache -> lint -> test -> audit -> build image (staging)
+#   -> manual approval -> production
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------- Continuous Integration ----------------
+  test:
+    name: Test (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The app uses the built-in node:sqlite module, which needs Node 22.13 or newer.
+        node-version: [22.x, 24.x]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm # caches ~/.npm between runs to speed up builds
+
+      - name: Install dependencies
+        run: npm ci # faster and more reliable than "npm install" in CI
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+
+      - name: Security audit (production dependencies)
+        run: npm audit --omit=dev --audit-level=high
+
+  # ---------------- Continuous Delivery: staging ----------------
+  deploy-staging:
+    name: Build and publish Docker image (staging)
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: read
+      packages: write # needed to push to GitHub Container Registry
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute image name (must be lowercase)
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:staging
+            ${{ env.IMAGE }}:${{ github.sha }}
+
+  # ---------------- Continuous Deployment: production ----------------
+  # Add "required reviewers" to the "production" environment in
+  # GitHub -> Settings -> Environments to make this step wait for a manual approval.
+  promote-production:
+    name: Promote image to production
+    needs: deploy-staging
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Promote the tested image
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}"
+          echo "$TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+          docker pull "$IMAGE:${GITHUB_SHA}"
+          docker tag "$IMAGE:${GITHUB_SHA}" "$IMAGE:production"
+          docker push "$IMAGE:production"

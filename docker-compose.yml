@@ -1,0 +1,27 @@
+# Run everything with:  docker compose up --build
+# Needs a ".env" file next to this file that defines JWT_SECRET (see .env.example).
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in the .env file}
+      DB_FILE: /app/data/tickets.db
+      REDIS_URL: redis://redis:6379
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      WORKERS: ${WORKERS:-0}
+    depends_on:
+      - redis
+    volumes:
+      - ticket-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  ticket-data:
