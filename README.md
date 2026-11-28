@@ -1,6 +1,6 @@
 # Event Ticket Booking API
 
-**Author:** [Royhan Phattanawiwat] · **Course:** [Web Programming] · **Repository:** [YOUR GITHUB REPO URL]
+**Author:** [Royhan Phattanawiwat] · **Course:** [Web Programming] · **Repository:** [(https://github.com/Angphat/ticket-booking-system)]
 
 A REST API for booking numbered seats at events, written in Node.js (Express). It is a **personal project built to apply three assigned articles** to one real application:
 
